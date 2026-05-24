@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resale ERP | Business Management</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* CSS Variables for Theming */
+        :root {
+            --bg-color: #f3f4f6;
+            --sidebar-bg: #111827;
+            --sidebar-text: #9ca3af;
+            --sidebar-hover: #ffffff;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #e5e7eb;
+            --radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --sidebar-bg: #030712;
+            --card-bg: #1f2937;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --border: #374151;
+        }
+
+        /* Base Resets */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--transition); }
+
+        /* Sidebar */
+        .sidebar { width: 250px; background-color: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; transition: var(--transition); z-index: 100; }
+        .logo-area { padding: 20px; font-size: 20px; font-weight: bold; color: white; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+        .nav-links { list-style: none; padding: 10px 0; flex: 1; overflow-y: auto; }
+        .nav-links li { padding: 0 10px; margin-bottom: 5px; }
+        .nav-links a { display: flex; align-items: center; gap: 15px; padding: 12px 20px; color: var(--sidebar-text); text-decoration: none; border-radius: var(--radius); transition: var(--transition); }
+        .nav-links a:hover, .nav-links a.active { background-color: rgba(255,255,255,0.1); color: var(--sidebar-hover); }
+        
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Top Header */
+        .top-header { height: 60px; background-color: var(--card-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; }
+        .header-actions { display: flex; gap: 15px; }
+        .btn-icon { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; transition: var(--transition); }
+        .btn-icon:hover { color: var(--primary); }
+
+        /* View Container */
+        .view-container { flex: 1; padding: 30px; overflow-y: auto; display: none; }
+        .view-container.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Dashboard Cards */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background-color: var(--card-bg); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; align-items: center; gap: 20px; }
+        .stat-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; color: white; }
+        .stat-info h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 5px; font-weight: normal; }
+        .stat-info p { font-size: 24px; font-weight: bold; color: var(--text-main); }
+        
+        .bg-primary { background-color: var(--primary); }
+        .bg-success { background-color: var(--success); }
+        .bg-warning { background-color: var(--warning); }
+        .bg-danger { background-color: var(--danger); }
+
+        /* Charts & Tables Area */
+        .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .card { background-color: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); padding: 20px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-title { font-size: 18px; font-weight: 600; color: var(--text-main); }
+
+        /* Typography & Buttons */
+        .btn { padding: 8px 16px; border-radius: var(--radius); border: none; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; transition: var(--transition); }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-success { background-color: var(--success); color: white; }
+        
+        /* Tables */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        th { background-color: rgba(0,0,0,0.02); font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 12px; }
+        tr:hover { background-color: rgba(0,0,0,0.01); }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .badge-stock { background-color: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .badge-sold { background-color: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background-color: var(--card-bg); width: 90%; max-width: 600px; border-radius: var(--radius); box-shadow: var(--shadow); max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+        
+        /* Forms */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-label { display: block; margin-bottom: 5px; font-size: 14px; color: var(--text-muted); }
+        .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); background-color: var(--bg-color); color: var(--text-main); font-size: 14px; transition: var(--transition); }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2); }
+
+        /* Floating Action Button */
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background-color: var(--primary); color: white; display: flex; justify-content: center; align-items: center; font-size: 24px; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); cursor: pointer; border: none; transition: var(--transition); z-index: 90; }
+        .fab:hover { transform: scale(1.05); }
+
+        /* Size Buttons & Images */
+        .size-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+        .size-btn { background: var(--bg-color); border: 1px solid var(--border); padding: 8px 12px; border-radius: 4px; color: var(--text-main); cursor: pointer; font-weight: 600; transition: var(--transition); }
+        .size-btn:hover { border-color: var(--primary); }
+        .size-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        .inv-img-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; border: 1px solid var(--border); transition: transform 0.2s; display: inline-block; margin-right: 5px; }
+        .inv-img-thumb:hover { transform: scale(1.1); border-color: var(--primary); }
+        .lightbox-img-wrapper { max-width: 90%; max-height: 90%; }
+        .lightbox-img-wrapper img { width: 100%; height: auto; max-height: 80vh; border-radius: var(--radius); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+
+        @media (max-width: 768px) {
+            .sidebar { position: absolute; transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .content-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="logo-area">
+            <i class="fa-solid fa-boxes-packing"></i> Bee26 ERP
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" class="active" data-view="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+            <li><a href="#" data-view="batches"><i class="fa-solid fa-layer-group"></i> Import Batches</a></li>
+            <li><a href="#" data-view="inventory"><i class="fa-solid fa-shirt"></i> Inventory</a></li>
+            <li><a href="#" data-view="sales"><i class="fa-solid fa-cart-shopping"></i> Sales</a></li>
+            <li><a href="#" data-view="settings"><i class="fa-solid fa-gear"></i> Settings</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <button class="btn-icon" id="mobile-menu-btn" style="display: none;"><i class="fa-solid fa-bars"></i></button>
+                <h2 id="current-view-title" style="font-size: 18px; font-weight: 600;">Dashboard</h2>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="exportData()"><i class="fa-solid fa-download" title="Backup JSON"></i></button>
+                <button class="btn-icon" id="theme-toggle"><i class="fa-solid fa-moon"></i></button>
+            </div>
+        </header>
+
+        <!-- DASHBOARD VIEW -->
+        <div class="view-container active" id="view-dashboard">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-icon bg-primary"><i class="fa-solid fa-shirt"></i></div>
+                    <div class="stat-info">
+                        <h3>Total Inventory</h3>
+                        <p id="dash-total-items">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-warning"><i class="fa-solid fa-money-bill-transfer"></i></div>
+                    <div class="stat-info">
+                        <h3>Total Value (LKR)</h3>
+                        <p id="dash-total-value">Rs 0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-success"><i class="fa-solid fa-chart-line"></i></div>
+                    <div class="stat-info">
+                        <h3>Estimated Profit</h3>
+                        <p id="dash-est-profit">Rs 0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-danger"><i class="fa-solid fa-cart-arrow-down"></i></div>
+                    <div class="stat-info">
+                        <h3>Items Sold</h3>
+                        <p id="dash-sold-items">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Profit Analytics</span>
+                    </div>
+                    <canvas id="profitChart" height="100"></canvas>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Recent Activity</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="recent-activity-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BATCHES VIEW -->
+        <div class="view-container" id="view-batches">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Import Batches & Exchange Rates</span>
+                    <button class="btn btn-primary" onclick="openModal('batchModal')"><i class="fa-solid fa-plus"></i> New Batch</button>
+                </div>
+                <div class="table-responsive">
+                    <table id="batches-table">
+                        <thead>
+                            <tr>
+                                <th>Batch ID</th>
+                                <th>Date</th>
+                                <th>CAD/LKR Rate</th>
+                                <th>Total Shipping (CAD)</th>
+                                <th>Items Linked</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- INVENTORY VIEW -->
+        <div class="view-container" id="view-inventory">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Product Inventory</span>
+                    <div>
+                        <input type="text" id="search-inventory" class="form-control" placeholder="Search by name or SKU..." style="display: inline-block; width: auto; margin-right: 10px;">
+                        <button class="btn btn-primary" onclick="openProductModal()"><i class="fa-solid fa-plus"></i> Add Product</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table id="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Images</th>
+                                <th>Item Details</th>
+                                <th>Batch</th>
+                                <th>Buy (CAD)</th>
+                                <th>Landed (LKR)</th>
+                                <th>Sold For (LKR)</th>
+                                <th>Profit</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Placeholder for Sales and Settings to respect file size constraints -->
+        <div class="view-container" id="view-sales">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Sold Items & Sales Management</span>
+                </div>
+                <div class="table-responsive">
+                    <table id="sales-table">
+                        <thead>
+                            <tr>
+                                <th>Images</th>
+                                <th>Item Details</th>
+                                <th>Batch</th>
+                                <th>Buy (CAD)</th>
+                                <th>Landed (LKR)</th>
+                                <th>Sold For (LKR)</th>
+                                <th>Profit</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="view-container" id="view-settings">
+            <div class="card"><div class="card-header"><span class="card-title">System Settings</span></div>
+                <button class="btn btn-danger" onclick="clearData()">Wipe All Database Data</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- FAB for Quick Actions -->
+    <button class="fab" onclick="openProductModal()"><i class="fa-solid fa-plus"></i></button>
+
+    <!-- MODAL: Add/Edit Batch -->
+    <div class="modal-overlay" id="batchModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="card-title">Add New Import Batch</h3>
+                <button class="btn-icon" onclick="closeModal('batchModal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="batchForm">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label class="form-label">Batch ID / Name</label>
+                            <input type="text" id="b_id" class="form-control" placeholder="e.g. CAN-001" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date</label>
+                            <input type="date" id="b_date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Exchange Rate (1 CAD = X LKR)</label>
+                            <input type="number" step="0.01" id="b_rate" class="form-control" required>
+                        </div>
+                        <div class="form-group full-width">
+                            <label class="form-label">Total Shipping & Customs for Batch (CAD)</label>
+                            <input type="number" step="0.01" id="b_shipping" class="form-control" value="0" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('batchModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveBatch()">Save Batch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Add/Edit Product -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="card-title">Product Entry</h3>
+                <button class="btn-icon" onclick="closeModal('productModal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    <input type="hidden" id="p_uid">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label class="form-label">Select Import Batch (Sets Exchange Rate)</label>
+                            <select id="p_batch" class="form-control" required>
+                                </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Product Image 1</label>
+                            <input type="file" id="p_img_1" class="form-control" accept="image/*" onchange="handleImageUpload(event, 0)">
+                            <img id="preview_img_0" style="display:none; width: 60px; height: 60px; margin-top: 8px; border-radius: var(--radius); object-fit: cover; border: 1px solid var(--border);">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Product Image 2 (Optional)</label>
+                            <input type="file" id="p_img_2" class="form-control" accept="image/*" onchange="handleImageUpload(event, 1)">
+                            <img id="preview_img_1" style="display:none; width: 60px; height: 60px; margin-top: 8px; border-radius: var(--radius); object-fit: cover; border: 1px solid var(--border);">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">Product Name</label>
+                            <input type="text" id="p_name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Category</label>
+                            <select id="p_category" class="form-control">
+                                <option>Shirt</option><option>T-Shirt</option><option>Pants</option><option>Hoodie</option><option>Shoes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">SKU / Code</label>
+                            <input type="text" id="p_sku" class="form-control">
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label class="form-label">Select Size</label>
+                            <div class="size-selector">
+                                <button type="button" class="size-btn" onclick="selectSize(this, 'XS')">XS</button>
+                                <button type="button" class="size-btn" onclick="selectSize(this, 'S')">S</button>
+                                <button type="button" class="size-btn" onclick="selectSize(this, 'M')">M</button>
+                                <button type="button" class="size-btn" onclick="selectSize(this, 'L')">L</button>
+                                <button type="button" class="size-btn" onclick="selectSize(this, 'XL')">XL</button>
+                                <button type="button" class="size-btn" onclick="selectSize(this, 'XXL')">XXL</button>
+                                <button type="button" class="size-btn" onclick="selectSize(this, 'XXXL')">XXXL</button>
+                            </div>
+                            <input type="hidden" id="p_size" value="">
+                        </div>
+
+                        <div class="form-group full-width" style="margin-top: 10px;">
+                            <h4 style="margin-bottom: 5px; border-bottom: 1px solid var(--border); padding-bottom: 5px; color: var(--primary);">Pricing: Canada</h4>
+                        </div>
+                        <div class="form-group full-width">
+                            <label class="form-label">Buying Price (CAD)</label>
+                            <input type="number" step="0.01" id="p_cad_price" class="form-control" required oninput="calculatePreview()">
+                        </div>
+
+                        <div class="form-group full-width" style="margin-top: 10px;">
+                            <h4 style="margin-bottom: 5px; border-bottom: 1px solid var(--border); padding-bottom: 5px; color: var(--success);">Pricing: Sri Lanka</h4>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Expected Selling Price (LKR)</label>
+                            <input type="number" id="p_sell_price" class="form-control" required oninput="calculatePreview()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Actual Sold Price (LKR) - Leave 0 if unsold</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="number" id="p_actual_sold" value="0" class="form-control" oninput="calculatePreview()">
+                                <button type="button" id="btn_mark_unsold" class="btn btn-warning" style="display: none; white-space: nowrap;" onclick="markUnsold()">Revert to Unsold</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">Special Notes</label>
+                            <textarea id="p_notes" class="form-control" rows="2" placeholder="Any additional details..."></textarea>
+                        </div>
+                        
+                        <div class="form-group full-width" style="background: var(--bg-color); padding: 15px; border-radius: var(--radius); border: 1px dashed var(--border);">
+                            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 5px;">Auto Calculations (Based on Batch Data):</p>
+                            <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                                <span>Landed Cost: <span id="preview_landed">Rs 0</span></span>
+                                <span>Current Profit Setup: <span id="preview_profit" style="color: var(--success);">Rs 0</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('productModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="imageLightbox" onclick="closeLightbox()">
+        <div class="lightbox-img-wrapper" onclick="event.stopPropagation()">
+            <div style="text-align: right; margin-bottom: 10px;">
+                <button class="btn-icon" style="color: white; font-size: 24px;" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <img id="lightbox-img" src="">
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="quickSoldModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="card-title">Mark Product as Sold</h3>
+                <button class="btn-icon" onclick="closeModal('quickSoldModal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="qs_uid">
+                <div class="form-group full-width">
+                    <label class="form-label">Actual Sold Price (LKR)</label>
+                    <input type="number" id="qs_price" class="form-control" placeholder="Enter amount..." required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('quickSoldModal')">Cancel</button>
+                <button class="btn btn-success" onclick="saveQuickSold()"><i class="fa-solid fa-check"></i> Confirm Sold</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Database Initialization from LocalStorage
+        let db = {
+            batches: JSON.parse(localStorage.getItem('erp_batches')) || [],
+            products: JSON.parse(localStorage.getItem('erp_products')) || [],
+            settings: JSON.parse(localStorage.getItem('erp_settings')) || { theme: 'light' }
+        };
+
+        let myChart = null;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme(db.settings.theme);
+            document.getElementById('b_date').valueAsDate = new Date();
+            updateUI();
+            setupNavigation();
+        });
+
+        function saveData() {
+            localStorage.setItem('erp_batches', JSON.stringify(db.batches));
+            localStorage.setItem('erp_products', JSON.stringify(db.products));
+            localStorage.setItem('erp_settings', JSON.stringify(db.settings));
+            updateUI();
+        }
+
+        // --- Core UI & Navigation ---
+        function setupNavigation() {
+            const links = document.querySelectorAll('.nav-links a');
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    links.forEach(l => l.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    
+                    const targetView = e.currentTarget.getAttribute('data-view');
+                    document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+                    document.getElementById('view-' + targetView).classList.add('active');
+                    
+                    document.getElementById('current-view-title').innerText = e.currentTarget.innerText;
+                    
+                    if(targetView === 'dashboard') renderChart();
+                });
+            });
+
+            // Theme Toggle
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                db.settings.theme = db.settings.theme === 'light' ? 'dark' : 'light';
+                applyTheme(db.settings.theme);
+                saveData();
+            });
+        }
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            document.getElementById('theme-toggle').innerHTML = theme === 'dark' ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+        }
+
+        function updateUI() {
+            renderBatches();
+            renderInventory();
+            renderSales();
+            renderDashboard();
+        }
+
+        // --- Modals ---
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            if(id === 'productModal') document.getElementById('productForm').reset();
+            if(id === 'batchModal') document.getElementById('batchForm').reset();
+        }
+
+        // --- Batch Management ---
+        function saveBatch() {
+            const id = document.getElementById('b_id').value;
+            const date = document.getElementById('b_date').value;
+            const rate = parseFloat(document.getElementById('b_rate').value);
+            const shipping = parseFloat(document.getElementById('b_shipping').value);
+
+            if(!id || !date || !rate) return alert("Please fill all required fields");
+
+            const existingIndex = db.batches.findIndex(b => b.id === id);
+            const batchObj = { id, date, rate, shipping, created_at: new Date().toISOString() };
+
+            if(existingIndex > -1) {
+                db.batches[existingIndex] = batchObj;
+            } else {
+                db.batches.push(batchObj);
+            }
+
+            closeModal('batchModal');
+            saveData();
+        }
+
+        function renderBatches() {
+            const tbody = document.querySelector('#batches-table tbody');
+            const batchSelect = document.getElementById('p_batch');
+            tbody.innerHTML = '';
+            batchSelect.innerHTML = '<option value="">-- Select Batch --</option>';
+
+            db.batches.forEach(b => {
+                const itemsCount = db.products.filter(p => p.batchId === b.id).length;
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${b.id}</strong></td>
+                        <td>${b.date}</td>
+                        <td>Rs ${b.rate.toFixed(2)}</td>
+                        <td>$${b.shipping.toFixed(2)}</td>
+                        <td><span class="badge badge-stock">${itemsCount} Items</span></td>
+                        <td>
+                            <button class="btn-icon" onclick="deleteBatch('${b.id}')"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+                batchSelect.innerHTML += `<option value="${b.id}">${b.id} (Rate: ${b.rate})</option>`;
+            });
+        }
+
+        function deleteBatch(id) {
+            if(confirm("Delete this batch? Associated products will lose their exchange rate reference.")) {
+                db.batches = db.batches.filter(b => b.id !== id);
+                saveData();
+            }
+        }
+
+        // --- Product / Inventory Management ---
+        let currentProductImages = ["", ""];
+
+        function handleImageUpload(event, index) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentProductImages[index] = e.target.result;
+                    document.getElementById('preview_img_' + index).src = e.target.result;
+                    document.getElementById('preview_img_' + index).style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function openLightbox(src) {
+            if(!src) return;
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('imageLightbox').classList.add('active');
+        }
+
+        function closeLightbox() {
+            document.getElementById('imageLightbox').classList.remove('active');
+        }
+
+        function selectSize(btn, size) {
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('p_size').value = size;
+        }
+
+        function openProductModal() {
+            if(db.batches.length === 0) {
+                alert("Please create an Import Batch first to set your exchange rate.");
+                return openModal('batchModal');
+            }
+            document.getElementById('p_uid').value = Date.now().toString();
+            document.getElementById('preview_landed').innerText = 'Rs 0';
+            document.getElementById('preview_profit').innerText = 'Rs 0';
+            
+            // Clear custom arrays and styles
+            currentProductImages = ["", ""];
+            document.getElementById('preview_img_0').style.display = 'none';
+            document.getElementById('preview_img_0').src = '';
+            document.getElementById('preview_img_1').style.display = 'none';
+            document.getElementById('preview_img_1').src = '';
+            document.getElementById('p_size').value = '';
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+
+            const btnUnsold = document.getElementById('btn_mark_unsold');
+            if(btnUnsold) btnUnsold.style.display = 'none';
+
+            openModal('productModal');
+        }
+
+        function calculateLandedCost(cadPrice, batchId) {
+            const batch = db.batches.find(b => b.id === batchId);
+            if(!batch) return 0;
+            return cadPrice * batch.rate;
+        }
+
+        function calculatePreview() {
+            const batchId = document.getElementById('p_batch').value;
+            const cadPrice = parseFloat(document.getElementById('p_cad_price').value) || 0;
+            const estSellPrice = parseFloat(document.getElementById('p_sell_price').value) || 0;
+            const actualSold = parseFloat(document.getElementById('p_actual_sold').value) || 0;
+            
+            const landed = calculateLandedCost(cadPrice, batchId);
+            // Show profit based on actual sold price if it exists, otherwise use expected
+            const calculationPrice = actualSold > 0 ? actualSold : estSellPrice;
+            const profit = calculationPrice - landed;
+
+            document.getElementById('preview_landed').innerText = `Rs ${landed.toFixed(2)}`;
+            document.getElementById('preview_profit').innerText = `Rs ${profit.toFixed(2)}`;
+        }
+
+        document.getElementById('p_batch').addEventListener('change', calculatePreview);
+
+        function saveProduct() {
+            const uid = document.getElementById('p_uid').value;
+            const batchId = document.getElementById('p_batch').value;
+            const name = document.getElementById('p_name').value;
+            const category = document.getElementById('p_category').value;
+            const sku = document.getElementById('p_sku').value;
+            const size = document.getElementById('p_size').value;
+            const notes = document.getElementById('p_notes').value;
+            const cadPrice = parseFloat(document.getElementById('p_cad_price').value);
+            const sellPrice = parseFloat(document.getElementById('p_sell_price').value);
+            const actualSold = parseFloat(document.getElementById('p_actual_sold').value) || 0;
+
+            if(!batchId || !name || !cadPrice || !sellPrice) return alert("Fill required fields");
+
+            const prodObj = { 
+                uid, batchId, name, category, sku, size, notes, 
+                cadPrice, sellPrice, actualSold, 
+                images: [...currentProductImages],
+                status: actualSold > 0 ? 'Sold' : 'In Stock', 
+                added_date: new Date().toISOString() 
+            };
+            
+            const existingIndex = db.products.findIndex(p => p.uid === uid);
+            if(existingIndex > -1) db.products[existingIndex] = prodObj;
+            else db.products.push(prodObj);
+
+            closeModal('productModal');
+            saveData();
+        }
+
+        function renderInventory() {
+            const tbody = document.querySelector('#inventory-table tbody');
+            tbody.innerHTML = '';
+            
+            // Only show In Stock items in Inventory tab
+            db.products.filter(p => p.status !== 'Sold').forEach(p => {
+                const landed = calculateLandedCost(p.cadPrice, p.batchId);
+                const profit = p.sellPrice - landed;
+                
+                let imgHtml = '';
+                if(p.images && p.images[0]) imgHtml += `<img src="${p.images[0]}" class="inv-img-thumb" onclick="openLightbox('${p.images[0]}')">`;
+                if(p.images && p.images[1]) imgHtml += `<img src="${p.images[1]}" class="inv-img-thumb" onclick="openLightbox('${p.images[1]}')">`;
+                if(!imgHtml) imgHtml = '<span class="text-muted" style="font-size:12px;">No Image</span>';
+
+                const sizeBadge = p.size ? `<span class="badge" style="background:var(--primary); color:white; margin-top:5px;">Size: ${p.size}</span>` : '';
+                const displaySold = `<small class="text-muted">Est: Rs ${p.sellPrice.toFixed(2)}</small>`;
+
+                // The new proper "SOLD" button
+                const quickSoldBtn = `<button class="btn btn-success" onclick="openQuickSold('${p.uid}', ${p.sellPrice})" style="padding: 4px 10px; font-size: 12px; margin-right: 5px; border-radius: 4px;">SOLD</button>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${imgHtml}</td>
+                        <td>
+                            <strong>${p.name}</strong><br>
+                            <small class="text-muted">${p.sku || 'No SKU'}</small><br>
+                            ${sizeBadge}
+                        </td>
+                        <td><span class="badge" style="background:#e5e7eb">${p.batchId}</span></td>
+                        <td>$${p.cadPrice.toFixed(2)}</td>
+                        <td>Rs ${landed.toFixed(2)}</td>
+                        <td>${displaySold}</td>
+                        <td style="color: ${profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">
+                            Rs ${profit.toFixed(2)}
+                        </td>
+                        <td><span class="badge badge-stock">${p.status}</span></td>
+                        <td>
+                            ${quickSoldBtn}
+                            <button class="btn-icon" onclick="editProduct('${p.uid}')" style="margin-right: 5px;" title="Edit Product"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn-icon" onclick="deleteProduct('${p.uid}')" title="Delete Product"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderSales() {
+            const tbody = document.querySelector('#sales-table tbody');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            // Only show Sold items in Sales tab
+            db.products.filter(p => p.status === 'Sold').forEach(p => {
+                const landed = calculateLandedCost(p.cadPrice, p.batchId);
+                const profit = p.actualSold - landed;
+                
+                let imgHtml = '';
+                if(p.images && p.images[0]) imgHtml += `<img src="${p.images[0]}" class="inv-img-thumb" onclick="openLightbox('${p.images[0]}')">`;
+                if(p.images && p.images[1]) imgHtml += `<img src="${p.images[1]}" class="inv-img-thumb" onclick="openLightbox('${p.images[1]}')">`;
+                if(!imgHtml) imgHtml = '<span class="text-muted" style="font-size:12px;">No Image</span>';
+
+                const sizeBadge = p.size ? `<span class="badge" style="background:var(--primary); color:white; margin-top:5px;">Size: ${p.size}</span>` : '';
+                const displaySold = `<strong style="color:var(--success)">Rs ${p.actualSold.toFixed(2)}</strong>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${imgHtml}</td>
+                        <td>
+                            <strong>${p.name}</strong><br>
+                            <small class="text-muted">${p.sku || 'No SKU'}</small><br>
+                            ${sizeBadge}
+                        </td>
+                        <td><span class="badge" style="background:#e5e7eb">${p.batchId}</span></td>
+                        <td>$${p.cadPrice.toFixed(2)}</td>
+                        <td>Rs ${landed.toFixed(2)}</td>
+                        <td>${displaySold}</td>
+                        <td style="color: ${profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">
+                            Rs ${profit.toFixed(2)}
+                        </td>
+                        <td><span class="badge badge-sold">${p.status}</span></td>
+                        <td>
+                            <button class="btn-icon" onclick="editProduct('${p.uid}')" style="margin-right: 5px;" title="Edit Product"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn-icon" onclick="deleteProduct('${p.uid}')" title="Delete Product"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function editProduct(uid) {
+            const product = db.products.find(p => p.uid === uid);
+            if(!product) return;
+
+            // Populate text/number fields
+            document.getElementById('p_uid').value = product.uid;
+            document.getElementById('p_batch').value = product.batchId;
+            document.getElementById('p_name').value = product.name;
+            document.getElementById('p_category').value = product.category;
+            document.getElementById('p_sku').value = product.sku || '';
+            document.getElementById('p_cad_price').value = product.cadPrice;
+            document.getElementById('p_sell_price').value = product.sellPrice;
+            document.getElementById('p_actual_sold').value = product.actualSold || 0;
+            document.getElementById('p_notes').value = product.notes || '';
+            
+            // Toggle Unsold button visibility
+            const btnUnsold = document.getElementById('btn_mark_unsold');
+            if(product.status === 'Sold') {
+                btnUnsold.style.display = 'block';
+            } else {
+                btnUnsold.style.display = 'none';
+            }
+
+            // Populate image fields
+            currentProductImages = product.images ? [...product.images] : ["", ""];
+            
+            if(currentProductImages[0]) {
+                document.getElementById('preview_img_0').src = currentProductImages[0];
+                document.getElementById('preview_img_0').style.display = 'block';
+            } else {
+                document.getElementById('preview_img_0').style.display = 'none';
+                document.getElementById('preview_img_0').src = '';
+            }
+            
+            if(currentProductImages[1]) {
+                document.getElementById('preview_img_1').src = currentProductImages[1];
+                document.getElementById('preview_img_1').style.display = 'block';
+            } else {
+                document.getElementById('preview_img_1').style.display = 'none';
+                document.getElementById('preview_img_1').src = '';
+            }
+
+            // Populate Size Buttons
+            document.getElementById('p_size').value = product.size || '';
+            document.querySelectorAll('.size-btn').forEach(b => {
+                b.classList.remove('selected');
+                if(product.size && b.innerText === product.size) {
+                    b.classList.add('selected');
+                }
+            });
+
+            // Update auto calculations and open modal
+            calculatePreview();
+            openModal('productModal');
+        }
+
+        function markUnsold() {
+            document.getElementById('p_actual_sold').value = 0;
+            document.getElementById('btn_mark_unsold').style.display = 'none';
+            calculatePreview();
+            alert("Set to Unsold! Please click 'Save Product' below to finalize the changes.");
+        }
+
+        function deleteProduct(uid) {
+            if(confirm("Delete this product?")) {
+                db.products = db.products.filter(p => p.uid !== uid);
+                saveData();
+            }
+        }
+
+        function openQuickSold(uid, expectedPrice) {
+            document.getElementById('qs_uid').value = uid;
+            document.getElementById('qs_price').value = expectedPrice; // Pre-fill with the expected selling price for speed
+            openModal('quickSoldModal');
+            
+            // Auto-focus the input box for faster typing
+            setTimeout(() => {
+                document.getElementById('qs_price').focus();
+                document.getElementById('qs_price').select();
+            }, 100);
+        }
+
+        function saveQuickSold() {
+            const uid = document.getElementById('qs_uid').value;
+            const soldPrice = parseFloat(document.getElementById('qs_price').value);
+            
+            if (isNaN(soldPrice) || soldPrice <= 0) {
+                return alert("Please enter a valid sold price.");
+            }
+
+            const productIndex = db.products.findIndex(p => p.uid === uid);
+            if (productIndex > -1) {
+                db.products[productIndex].actualSold = soldPrice;
+                db.products[productIndex].status = 'Sold';
+                saveData(); // This handles saving to DB and re-rendering everything
+                closeModal('quickSoldModal');
+            }
+        }
+
+        // --- Dashboard & Analytics ---
+        function renderDashboard() {
+            let totalItems = db.products.length;
+            let totalValue = 0;
+            let estProfit = 0;
+            let soldItems = db.products.filter(p => p.status === 'Sold').length;
+
+            db.products.forEach(p => {
+                if(p.status === 'In Stock') {
+                    const landed = calculateLandedCost(p.cadPrice, p.batchId);
+                    totalValue += landed;
+                    estProfit += (p.sellPrice - landed);
+                }
+            });
+
+            document.getElementById('dash-total-items').innerText = totalItems;
+            document.getElementById('dash-total-value').innerText = `Rs ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('dash-est-profit').innerText = `Rs ${estProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('dash-sold-items').innerText = soldItems;
+
+            // Populate Recent Activity
+            const actBody = document.querySelector('#recent-activity-table tbody');
+            actBody.innerHTML = '';
+            db.products.slice(-5).reverse().forEach(p => {
+                actBody.innerHTML += `<tr><td>${p.name}</td><td>Added to ${p.batchId}</td></tr>`;
+            });
+
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('profitChart').getContext('2d');
+            if(myChart) myChart.destroy();
+
+            // Aggregate profit by Category
+            let categories = {};
+            db.products.forEach(p => {
+                if(!categories[p.category]) categories[p.category] = 0;
+                categories[p.category] += (p.sellPrice - calculateLandedCost(p.cadPrice, p.batchId));
+            });
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(categories),
+                    datasets: [{
+                        label: 'Estimated Profit by Category (LKR)',
+                        data: Object.values(categories),
+                        backgroundColor: '#4f46e5',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // --- Utilities ---
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "bee26_erp_backup_" + new Date().getTime() + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function clearData() {
+            if(confirm("DANGER! Are you sure you want to delete ALL data? Make sure you exported a backup first!")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
