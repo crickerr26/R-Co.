@@ -129,9 +129,34 @@
         .lightbox-img-wrapper img { width: 100%; height: auto; max-height: 80vh; border-radius: var(--radius); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
 
         @media (max-width: 768px) {
-            .sidebar { position: absolute; transform: translateX(-100%); }
-            .sidebar.open { transform: translateX(0); }
-            .content-grid { grid-template-columns: 1fr; }
+            /* Transform layout to column */
+            body { flex-direction: column; }
+            
+            /* Bottom Navigation Bar Setup */
+            .sidebar { width: 100%; height: 70px; flex-direction: row; position: fixed; bottom: 0; left: 0; z-index: 1000; border-top: 1px solid var(--border); box-shadow: 0 -4px 10px rgba(0,0,0,0.2); transform: none; }
+            .logo-area { display: none; } /* Hide logo on mobile to save space */
+            .nav-links { display: flex; flex-direction: row; width: 100%; padding: 0; margin: 0; justify-content: space-around; overflow-x: auto; align-items: center; }
+            .nav-links li { flex: 1; margin: 0; padding: 0; display: flex; }
+            .nav-links a { flex: 1; flex-direction: column; padding: 8px 0; gap: 6px; font-size: 11px; justify-content: center; border-radius: 0; text-align: center; }
+            .nav-links a i { font-size: 20px; margin: 0; }
+            
+            /* Main Content & Padding Adjustments */
+            .main-content { padding-bottom: 70px; } /* Prevent bottom content from hiding behind nav */
+            .top-header { padding: 0 15px; }
+            .view-container { padding: 15px; }
+            
+            /* Grid and Card adjustments for small screens */
+            .content-grid { grid-template-columns: 1fr; gap: 15px; }
+            .dashboard-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .stat-card { padding: 15px 10px; flex-direction: column; text-align: center; gap: 8px; }
+            .form-grid { grid-template-columns: 1fr; } /* Stack form inputs vertically */
+            
+            /* User-friendly Data Tables */
+            table { white-space: nowrap; } /* Allow horizontal scrolling instead of squished text */
+            th, td { padding: 10px; font-size: 13px; }
+            
+            /* Move Floating Action Button above bottom bar */
+            .fab { bottom: 90px; right: 20px; width: 55px; height: 55px; font-size: 20px; }
         }
     </style>
 </head>
