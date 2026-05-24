@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Resale ERP | Business Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         /* CSS Variables for Theming */
         :root {
@@ -296,23 +297,25 @@
                 <div class="card-header">
                     <span class="card-title">Product Inventory</span>
                     <div>
-                        <input type="text" id="search-inventory" class="form-control" placeholder="Search by name or SKU..." style="display: inline-block; width: auto; margin-right: 10px;">
+                        <input type="text" id="search-inventory" class="form-control" placeholder="Search by name or brand..." style="display: inline-block; width: auto; margin-right: 10px;" oninput="renderInventory()">
+                        <button class="btn btn-success" onclick="downloadInventoryPDF()" style="margin-right: 10px;"><i class="fa-solid fa-file-pdf"></i> Report</button>
                         <button class="btn btn-primary" onclick="openProductModal()"><i class="fa-solid fa-plus"></i> Add Product</button>
                     </div>
                 </div>
-                <div class="table-responsive">
+                <div class="table-responsive" id="inventory-export-area">
                     <table id="inventory-table">
                         <thead>
                             <tr>
-                                <th>Images</th>
-                                <th>Item Details</th>
-                                <th>Batch</th>
+                                <th style="position: sticky; left: 0; z-index: 11; background: var(--bg-color); min-width: 95px;">Images</th>
+                                <th style="position: sticky; left: 95px; z-index: 11; background: var(--bg-color); min-width: 150px; border-right: 1px solid var(--border);">Item Details</th>
                                 <th>Buy (CAD)</th>
+                                <th>Sell (CAD)</th>
+                                <th>Profit (CAD)</th>
                                 <th>Landed (LKR)</th>
                                 <th>Sold For (LKR)</th>
-                                <th>Profit</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>Profit (LKR)</th>
+                                <th>Sale</th>
+                                <th class="no-print">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -435,8 +438,17 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">SKU / Code (Optional)</label>
-                            <input type="text" id="p_sku" class="form-control">
+                            <label class="form-label">Brand (Optional)</label>
+                            <input type="text" id="p_brand" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Pieces <span style="color:var(--danger)">*</span></label>
+                            <select id="p_pieces" class="form-control" required>
+                                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                                <option value="10">10</option>
+                            </select>
                         </div>
                         
                         <div class="form-group full-width">
@@ -842,7 +854,8 @@
             const batchId = document.getElementById('p_batch').value;
             const name = document.getElementById('p_name').value.trim();
             const category = document.getElementById('p_category').value;
-            const sku = document.getElementById('p_sku').value.trim();
+            const brand = document.getElementById('p_brand').value.trim();
+            const pieces = document.getElementById('p_pieces').value;
             const size = document.getElementById('p_size').value;
             const notes = document.getElementById('p_notes').value.trim();
             
@@ -862,7 +875,7 @@
             }
 
             const prodObj = { 
-                uid, batchId, name, category, sku, size, notes, 
+                uid, batchId, name, category, brand, pieces, size, notes, 
                 cadPrice, cadSellPrice, sellPrice, actualSold, 
                 images: [...currentProductImages],
                 status: actualSold > 0 ? 'Sold' : 'In Stock', 
@@ -894,45 +907,103 @@
             const tbody = document.querySelector('#inventory-table tbody');
             tbody.innerHTML = '';
             
-            // Only show In Stock items in Inventory tab
-            db.products.filter(p => p.status !== 'Sold').forEach(p => {
-                const landed = calculateLandedCost(p.cadPrice, p.batchId);
-                const profit = p.sellPrice - landed;
-                
-                let imgHtml = '';
-                if(p.images && p.images[0]) imgHtml += `<img src="${p.images[0]}" class="inv-img-thumb" onclick="openLightbox('${p.images[0]}')">`;
-                if(p.images && p.images[1]) imgHtml += `<img src="${p.images[1]}" class="inv-img-thumb" onclick="openLightbox('${p.images[1]}')">`;
-                if(!imgHtml) imgHtml = '<span class="text-muted" style="font-size:12px;">No Image</span>';
+            const searchTerm = document.getElementById('search-inventory').value.toLowerCase();
+            
+            // Filter products by search term
+            let filteredProducts = db.products.filter(p => {
+                return p.name.toLowerCase().includes(searchTerm) || (p.brand && p.brand.toLowerCase().includes(searchTerm));
+            });
 
-                const sizeBadge = p.size ? `<span class="badge" style="background:var(--primary); color:white; margin-top:5px;">Size: ${p.size}</span>` : '';
-                const displaySold = `<small class="text-muted">Est: Rs ${p.sellPrice.toFixed(2)}</small>`;
+            // Group by Size
+            const grouped = {};
+            filteredProducts.forEach(p => {
+                const sizeKey = p.size || 'Unassigned';
+                if(!grouped[sizeKey]) grouped[sizeKey] = [];
+                grouped[sizeKey].push(p);
+            });
 
-                // The new proper "SOLD" button
-                const quickSoldBtn = `<button class="btn btn-success" onclick="openQuickSold('${p.uid}', ${p.sellPrice})" style="padding: 4px 10px; font-size: 12px; margin-right: 5px; border-radius: 4px;">SOLD</button>`;
-
+            // Render categorized by Size
+            for (const sizeId in grouped) {
+                // Add Size Header Row spanning all columns
                 tbody.innerHTML += `
                     <tr>
-                        <td>${imgHtml}</td>
-                        <td>
-                            <strong>${p.name}</strong><br>
-                            <small class="text-muted">${p.sku || 'No SKU'}</small><br>
-                            ${sizeBadge}
-                        </td>
-                        <td><span class="badge" style="background:#e5e7eb">${p.batchId}</span></td>
-                        <td>$${p.cadPrice.toFixed(2)}</td>
-                        <td>Rs ${landed.toFixed(2)}</td>
-                        <td>${displaySold}</td>
-                        <td style="color: ${profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">
-                            Rs ${profit.toFixed(2)}
-                        </td>
-                        <td><span class="badge badge-stock">${p.status}</span></td>
-                        <td>
-                            ${quickSoldBtn}
-                            <button class="btn-icon" onclick="editProduct('${p.uid}')" style="margin-right: 5px;" title="Edit Product"><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn-icon" onclick="deleteProduct('${p.uid}')" title="Delete Product"><i class="fa-solid fa-trash"></i></button>
+                        <td colspan="10" style="background-color: rgba(79, 70, 229, 0.1); font-weight: bold; color: var(--primary); padding: 10px 15px;">
+                            <i class="fa-solid fa-ruler-combined"></i> Size Category: ${sizeId}
                         </td>
                     </tr>
                 `;
+
+                grouped[sizeId].forEach(p => {
+                    const landed = calculateLandedCost(p.cadPrice, p.batchId);
+                    
+                    const isSold = p.status === 'Sold';
+                    const displaySoldPrice = isSold ? p.actualSold : p.sellPrice;
+                    const profitLKR = displaySoldPrice - landed;
+                    
+                    const cadSell = p.cadSellPrice || 0;
+                    const profitCAD = cadSell - p.cadPrice;
+                    
+                    let imgHtml = '';
+                    if(p.images && p.images[0]) imgHtml += `<img src="${p.images[0]}" class="inv-img-thumb" onclick="openLightbox('${p.images[0]}')">`;
+                    if(p.images && p.images[1]) imgHtml += `<img src="${p.images[1]}" class="inv-img-thumb" onclick="openLightbox('${p.images[1]}')">`;
+                    if(!imgHtml) imgHtml = '<span class="text-muted" style="font-size:10px;">No Image</span>';
+
+                    const sizeBadge = p.size ? `<span style="background:var(--primary); color:white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; display: inline-block; margin-top: 3px;">Size: ${p.size}</span>` : '';
+                    
+                    // Colored dot for stock status
+                    const statusColor = isSold ? 'var(--danger)' : 'var(--success)';
+                    const statusDot = `<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor}; margin-right: 6px; box-shadow: 0 0 3px ${statusColor};" title="${p.status}"></span>`;
+
+                    const displaySoldLKR = isSold ? `<strong style="color:var(--success)">Rs ${p.actualSold.toFixed(2)}</strong>` : `<small class="text-muted">Est: Rs ${p.sellPrice.toFixed(2)}</small>`;
+
+                    const quickSoldBtn = isSold ? '<span class="badge badge-sold">Sold</span>' : `<button class="btn btn-success" onclick="openQuickSold('${p.uid}', ${p.sellPrice})" style="padding: 4px 10px; font-size: 12px; border-radius: 4px;">SOLD</button>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="position: sticky; left: 0; background-color: var(--card-bg); z-index: 10; min-width: 95px;">${imgHtml}</td>
+                            <td style="position: sticky; left: 95px; background-color: var(--card-bg); z-index: 10; border-right: 1px solid var(--border); min-width: 150px;">
+                                <div style="font-size: 12px; line-height: 1.3;">
+                                    ${statusDot}<strong>${p.name}</strong><br>
+                                    <span class="text-muted" style="font-size: 11px;">${p.brand || 'No Brand'} | ${p.pieces || 1} Pcs</span><br>
+                                    ${sizeBadge}
+                                </div>
+                            </td>
+                            <td>$${p.cadPrice.toFixed(2)}</td>
+                            <td>$${cadSell.toFixed(2)}</td>
+                            <td style="color: ${profitCAD >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">$${profitCAD.toFixed(2)}</td>
+                            <td>Rs ${landed.toFixed(2)}</td>
+                            <td>${displaySoldLKR}</td>
+                            <td style="color: ${profitLKR >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">
+                                Rs ${profitLKR.toFixed(2)}
+                            </td>
+                            <td>${quickSoldBtn}</td>
+                            <td class="no-print">
+                                <button class="btn-icon" onclick="editProduct('${p.uid}')" style="margin-right: 5px;" title="Edit Product"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn-icon" onclick="deleteProduct('${p.uid}')" title="Delete Product"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function downloadInventoryPDF() {
+            const element = document.getElementById('inventory-export-area');
+            const opt = {
+              margin:       0.2,
+              filename:     'Inventory_Report.pdf',
+              image:        { type: 'jpeg', quality: 0.98 },
+              html2canvas:  { scale: 2 },
+              jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+            };
+            
+            // Temporarily hide action columns before generating PDF
+            const actions = element.querySelectorAll('.no-print');
+            actions.forEach(el => el.style.display = 'none');
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore the UI when done
+                actions.forEach(el => el.style.display = '');
             });
         }
 
@@ -959,7 +1030,7 @@
                         <td>${imgHtml}</td>
                         <td>
                             <strong>${p.name}</strong><br>
-                            <small class="text-muted">${p.sku || 'No SKU'}</small><br>
+                            <small class="text-muted">${p.brand || 'No Brand'} | ${p.pieces || 1} Pcs</small><br>
                             ${sizeBadge}
                         </td>
                         <td><span class="badge" style="background:#e5e7eb">${p.batchId}</span></td>
@@ -988,7 +1059,8 @@
             document.getElementById('p_batch').value = product.batchId;
             document.getElementById('p_name').value = product.name;
             document.getElementById('p_category').value = product.category;
-            document.getElementById('p_sku').value = product.sku || '';
+            document.getElementById('p_brand').value = product.brand || '';
+            document.getElementById('p_pieces').value = product.pieces || '1';
             document.getElementById('p_cad_price').value = product.cadPrice;
             document.getElementById('p_cad_sell_price').value = product.cadSellPrice || '';
             document.getElementById('p_sell_price').value = product.sellPrice || '';
