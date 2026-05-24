@@ -177,7 +177,7 @@
     <!-- Sidebar Navigation -->
     <nav class="sidebar" id="sidebar">
         <div class="logo-area">
-            <i class="fa-solid fa-boxes-packing"></i> Bee26 ERP
+            <img src="R&Co Logo.png" alt="R&Co Logo" style="max-height: 40px; max-width: 100%; object-fit: contain;">
         </div>
         <ul class="nav-links">
             <li><a href="#" class="active" data-view="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
@@ -722,7 +722,7 @@
                     const ctx = canvas.getContext('2d');
 
                     // Set maximum dimensions to keep file size tiny but visible
-                    const MAX_SIZE = 800;
+                    const MAX_SIZE = 500; // Lower resolution for faster speed
                     let width = img.width;
                     let height = img.height;
 
@@ -742,13 +742,16 @@
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Compress to JPEG at 60% quality (Massive file size reduction)
-                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                    // Compress to JPEG at 50% quality (Massive file size reduction)
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
                     currentProductImages[index] = compressedBase64; // Set local instantly so you can save
+                    
+                    // UNBLOCK UI IMMEDIATELY: Let the user save without waiting for the cloud upload!
+                    isImageUploading = false;
                     
                     if (cloudStorage) {
                         try {
-                            // Convert compressed base64 back to a Blob for Firebase
+                            // Convert compressed base64 back to a Blob for Firebase (Happens in background now)
                             const res = await fetch(compressedBase64);
                             const blob = await res.blob();
                             
@@ -757,12 +760,11 @@
                             const snapshot = await fileRef.put(blob);
                             const downloadURL = await snapshot.ref.getDownloadURL();
                             
-                            currentProductImages[index] = downloadURL; // Upgrade to cloud URL when done
+                            currentProductImages[index] = downloadURL; // Upgrade to cloud URL when done seamlessly
                         } catch (error) {
                             console.warn("Cloud upload failed, falling back to local image.", error);
                         }
                     }
-                    isImageUploading = false;
                 };
                 img.src = localUrl;
             }
