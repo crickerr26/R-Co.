@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>R&Co.</title>
+    <title>Resale ERP | Business Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -318,8 +318,8 @@
                     <table id="inventory-table">
                         <thead>
                             <tr>
-                                <th style="position: sticky; left: 0; z-index: 11; background: var(--bg-color); min-width: 95px;">Images</th>
-                                <th style="position: sticky; left: 95px; z-index: 11; background: var(--bg-color); min-width: 150px; border-right: 1px solid var(--border);">Item Details</th>
+                                <th style="min-width: 95px;">Images</th>
+                                <th style="min-width: 150px;">Item Details</th>
                                 <th>Buy (CAD)</th>
                                 <th>Sell (CAD)</th>
                                 <th>Profit (CAD)</th>
@@ -412,6 +412,20 @@
     </div>
 
     <!-- MODAL: Add/Edit Product -->
+    <div class="modal-overlay" id="viewProductModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="card-title">Product Details</h3>
+                <button class="btn-icon" onclick="closeModal('viewProductModal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="viewProductBody" style="font-size: 14px; line-height: 1.6;">
+                </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('viewProductModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="productModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -977,10 +991,10 @@
 
                     tbody.innerHTML += `
                         <tr>
-                            <td style="position: sticky; left: 0; background-color: var(--card-bg); z-index: 10; min-width: 95px;">${imgHtml}</td>
-                            <td style="position: sticky; left: 95px; background-color: var(--card-bg); z-index: 10; border-right: 1px solid var(--border); min-width: 150px;">
+                            <td style="min-width: 95px;">${imgHtml}</td>
+                            <td style="min-width: 150px; cursor: pointer;" onclick="viewProductDetails('${p.uid}')" title="Click to view full details">
                                 <div style="font-size: 12px; line-height: 1.3;">
-                                    ${statusDot}<strong>${p.name}</strong><br>
+                                    ${statusDot}<strong>${p.name}</strong> <i class="fa-solid fa-circle-info text-muted" style="font-size: 10px; margin-left: 4px;"></i><br>
                                     <span class="text-muted" style="font-size: 11px;">${p.brand || 'No Brand'} | ${p.pieces || 1} Pcs</span><br>
                                     ${sizeBadge}
                                 </div>
@@ -995,6 +1009,7 @@
                             </td>
                             <td>${quickSoldBtn}</td>
                             <td class="no-print">
+                                <button class="btn-icon" onclick="viewProductDetails('${p.uid}')" style="margin-right: 5px;" title="View Details"><i class="fa-solid fa-eye"></i></button>
                                 <button class="btn-icon" onclick="editProduct('${p.uid}')" style="margin-right: 5px;" title="Edit Product"><i class="fa-solid fa-pen"></i></button>
                                 <button class="btn-icon" onclick="deleteProduct('${p.uid}')" title="Delete Product"><i class="fa-solid fa-trash"></i></button>
                             </td>
@@ -1065,6 +1080,68 @@
                     </tr>
                 `;
             });
+        }
+
+        function viewProductDetails(uid) {
+            const p = db.products.find(prod => prod.uid === uid);
+            if(!p) return;
+
+            const landed = calculateLandedCost(p.cadPrice, p.batchId);
+            const isSold = p.status === 'Sold';
+            const displaySoldPrice = isSold ? p.actualSold : p.sellPrice;
+            const profitLKR = displaySoldPrice - landed;
+            const cadSell = p.cadSellPrice || 0;
+            const profitCAD = cadSell - p.cadPrice;
+
+            let imgHtml = '';
+            if(p.images && p.images[0]) imgHtml += `<img src="${p.images[0]}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-right: 10px; border: 1px solid var(--border); cursor: pointer;" onclick="openLightbox('${p.images[0]}')">`;
+            if(p.images && p.images[1]) imgHtml += `<img src="${p.images[1]}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;" onclick="openLightbox('${p.images[1]}')">`;
+            if(!imgHtml) imgHtml = '<span class="text-muted">No Images Available</span>';
+
+            const statusColor = isSold ? 'var(--danger)' : 'var(--success)';
+
+            document.getElementById('viewProductBody').innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    ${imgHtml}
+                </div>
+                <div style="background: var(--bg-color); padding: 15px; border-radius: var(--radius); margin-bottom: 15px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 10px; color: var(--primary);">${p.name}</h4>
+                    <p><strong>Brand:</strong> ${p.brand || 'N/A'}</p>
+                    <p><strong>Category:</strong> ${p.category}</p>
+                    <p><strong>Size:</strong> <span class="badge" style="background:var(--primary); color:white;">${p.size || 'N/A'}</span></p>
+                    <p><strong>Pieces:</strong> ${p.pieces || 1}</p>
+                    <p><strong>Batch:</strong> ${p.batchId}</p>
+                    <p><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: bold;">${p.status}</span></p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--bg-color); padding: 15px; border-radius: var(--radius); border: 1px solid var(--border);">
+                    <div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Buy (CAD)</p>
+                        <p style="font-weight: bold;">$${p.cadPrice.toFixed(2)}</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Sell (CAD)</p>
+                        <p style="font-weight: bold;">$${cadSell.toFixed(2)}</p>
+                    </div>
+                    <div style="grid-column: 1 / -1; border-bottom: 1px solid var(--border); margin: 5px 0;"></div>
+                    <div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Landed (LKR)</p>
+                        <p style="font-weight: bold;">Rs ${landed.toFixed(2)}</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Sold For / Est (LKR)</p>
+                        <p style="font-weight: bold; color: ${isSold ? 'var(--success)' : 'inherit'};">Rs ${(isSold ? p.actualSold : p.sellPrice).toFixed(2)}</p>
+                    </div>
+                    <div style="grid-column: 1 / -1; padding-top: 10px;">
+                        <p style="font-size: 12px; color: var(--text-muted);">Profit (CAD) & (LKR)</p>
+                        <p style="font-weight: bold; font-size: 16px; color: ${profitLKR >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                            $${profitCAD.toFixed(2)} | Rs ${profitLKR.toFixed(2)}
+                        </p>
+                    </div>
+                </div>
+                ${p.notes ? `<div style="margin-top: 15px;"><p><strong>Notes:</strong> ${p.notes}</p></div>` : ''}
+            `;
+            openModal('viewProductModal');
         }
 
         function editProduct(uid) {
